@@ -1,0 +1,15 @@
+#ifndef GFS_CONFIG_H
+#define GFS_CONFIG_H
+
+#define GFS_MAX_PROTO 10
+#define GFS_MAX_HOST  256
+#define GFS_MAX_PORT  10
+#define GFS_MAX_URI   1024
+#define GFS_MAX_PATH  512
+#define GFS_MAX_POOL_SIZE 20
+
+#define GFS_DEFAULT_POOL_SIZE 20
+#define GFS_DEFAULT_POOL_AGE  1
+#define GFS_DEFAULT_POOL_CNX  4
+
+#endif
