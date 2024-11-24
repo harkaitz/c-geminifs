@@ -17,18 +17,18 @@ gfs_cnx_open_new(gfs_cnx_t **_cnx, char const _path[])
 	gfs_cnx_t       *cnx   = NULL;
 	cnx = calloc(1, sizeof(gfs_cnx_t));
 	if (!cnx/*err*/) { syslog(LOG_ERR, "Not enough memory."); return -1; }
-	syslog(LOG_INFO, "Openning %s ...", _path);
+	//syslog(LOG_INFO, "Openning %s ...", _path);
 	err = gfs_cnx_open(cnx, _path);
 	if (err<0/*err*/) { free(cnx); return err; }
 	*_cnx = cnx;
-	syslog(LOG_INFO, "New descriptor: %p (count:%i)", cnx, ++counter);
+	//syslog(LOG_INFO, "New descriptor: %p (count:%i)", cnx, ++counter);
 	return 0;
 }
 
 void
 gfs_cnx_free(gfs_cnx_t *_cnx)
 {
-	syslog(LOG_INFO, "Closing descriptor: %p (count:%i)", _cnx, --counter);
+	//syslog(LOG_INFO, "Closing descriptor: %p (count:%i)", _cnx, --counter);
 	gfs_cnx_reset(_cnx, false);
 	free(_cnx);
 }
@@ -108,7 +108,7 @@ gfs_cnx_read(gfs_cnx_t *_cnx, size_t _seek, char *_buf, size_t _size, size_t *_o
 
 	pthread_mutex_lock(&_cnx->mutex);
 
-	syslog(LOG_INFO, "Reading %p: seek=%li size=%li", _cnx, _seek, _size);
+	//syslog(LOG_INFO, "Reading %p: seek=%li size=%li", _cnx, _seek, _size);
 	if (_cnx->failed /*err*/) { syslog(LOG_ERR, "Connection failed"); goto cleanup; }
 
 	new_pos = _seek + _size;
