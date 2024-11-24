@@ -108,7 +108,7 @@ gfs_cnx_read(gfs_cnx_t *_cnx, size_t _seek, char *_buf, size_t _size, size_t *_o
 
 	pthread_mutex_lock(&_cnx->mutex);
 
-	syslog(LOG_ERR, "Reading %p: seek=%li size=%li", _cnx, _seek, _size);
+	syslog(LOG_INFO, "Reading %p: seek=%li size=%li", _cnx, _seek, _size);
 	if (_cnx->failed /*err*/) { syslog(LOG_ERR, "Connection failed"); goto cleanup; }
 
 	new_pos = _seek + _size;
