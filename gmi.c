@@ -194,13 +194,17 @@ gfs_cnx_readdir(
     size_t       _dsz
 ) {
 	int      err;
+	size_t   bytes;
 	if (_d) {
-		size_t bytes;
 		err = gfs_cnx_read(_cnx, 0, _d, _dsz-1, &bytes);
 		if (err<0/*err*/) { return -1; }
 		_d[bytes] = '\0';
 	}
 	if (!strcmp(_cnx->res_meta, "text/gemini")) {
+		if (_d && bytes>0 && _d[bytes-1] != '\n') {
+			errorf("Incomplete index file.");
+			return -1;
+		}
 		while (1) {
 			*_found = gem_getlink(_d, _cnx->uri, _uri, NULL, _r);
 			_d = NULL;

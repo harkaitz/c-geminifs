@@ -21,7 +21,7 @@
 #define errorf(...) syslog(LOG_ERR, "fuse: " __VA_ARGS__)
 
 #define GFS_CONFIG_DIR "/etc/geminifs"
-#define GFS_MAX_GMI_FILE 5*1024
+#define GFS_MAX_GMI_FILE 100*1024
 
 static char const HELP[] =
     "Usage: mount.gemini [OPTIONS...] DIRECTORY"                "\n"
