@@ -55,6 +55,7 @@ struct fs_options_s {
 };
 
 static struct fs_options_s gfs_opts = {
+	.servers = GFS_CONFIG_DIR "/servers",
 	.max_gmi_size = GFS_MAX_GMI_FILE,
 };
 static const struct fuse_operations gfs_ops;
@@ -136,6 +137,7 @@ gfs_readdir(
 	uri_t           *uri;
 	bool             found, start;
 	char             buffer[gfs_opts.max_gmi_size];
+	FILE            *fp;
 	char            *r;
 	char const      *name;
 	debugf("readdir %s", path);
@@ -143,17 +145,14 @@ gfs_readdir(
 	filler(buf, ".", NULL, 0, 0);
 	filler(buf, "..", NULL, 0, 0);
 	if (!strcmp(path, "/")) {
-		FILE *fp = fopen(
-		    (gfs_opts.servers)?gfs_opts.servers:GFS_CONFIG_DIR "/servers",
-		    "r"
-		);
-		if (!fp) return 0;
-		while (fgets(buffer, 256, fp)) {
-			if ((r = strchr(buffer, '\r'))) *r = '\0';
-			if ((r = strchr(buffer, '\n'))) *r = '\0';
-			filler(buf, buffer, NULL, 0, 0);
+		if ((fp = fopen(gfs_opts.servers, "r"))) {
+			while (fgets(buffer, 256, fp)) {
+				if ((r = strchr(buffer, '\r'))) *r = '\0';
+				if ((r = strchr(buffer, '\n'))) *r = '\0';
+				filler(buf, buffer, NULL, 0, 0);
+			}
+			fclose(fp);
 		}
-		fclose(fp);
 		return 0;
 	} else if (!strncmp(path, "/.Trash", sizeof("/.Trash")-1)) {
 		return 0;
