@@ -3,7 +3,6 @@
 #endif
 #define _POSIX_C_SOURCE 200809L
 #define FUSE_USE_VERSION 31
-
 #include "gmi.h"
 #include "uri.h"
 #include <fuse3/fuse.h>
@@ -14,6 +13,12 @@
 #include <limits.h>
 #include <signal.h>
 #include <syslog.h>
+#ifdef DEBUG
+#  define debugf(...) syslog(LOG_DEBUG, "fuse: " __VA_ARGS__)
+#else
+#  define debugf(...) ({})
+#endif
+#define errorf(...) syslog(LOG_ERR, "fuse: " __VA_ARGS__)
 
 #define GFS_CONFIG_DIR "/etc/geminifs"
 #define GFS_MAX_GMI_FILE 5*1024
@@ -86,6 +91,7 @@ main(int _argc, char *_argv[])
 static void *
 gfs_init(struct fuse_conn_info *_conn, struct fuse_config *_cfg)
 {
+	debugf("init");
 	_cfg->kernel_cache = 1;
 	return NULL;
 }
@@ -95,7 +101,7 @@ gfs_getattr(const char *path, struct stat *stbuf, struct fuse_file_info *fi)
 {
 	uri_t   *uri = NULL;
 	errn     err;
-	syslog(LOG_INFO, "getattr %s", path);
+	debugf("getattr %s", path);
 
 	memset(stbuf, 0, sizeof(struct stat));
 	if (!strcmp(path, "/")) {
@@ -132,6 +138,7 @@ gfs_readdir(
 	char             buffer[gfs_opts.max_gmi_size];
 	char            *r;
 	char const      *name;
+	debugf("readdir %s", path);
 	
 	filler(buf, ".", NULL, 0, 0);
 	filler(buf, "..", NULL, 0, 0);
@@ -177,6 +184,7 @@ gfs_open(const char *path, struct fuse_file_info *fi)
 {
 	gfs_cnx_t       *cnx  = NULL;
 	errn             err;
+	debugf("open %s", path);
 	if (!fi->fh) {
 		err = gfs_cnx_open_new(&cnx, path, URI_GEMINI);
 		if (err<0/*err*/) { return -ENOENT;}
@@ -190,6 +198,7 @@ static int
 gfs_release(const char *_path, struct fuse_file_info *_fi)
 {
 	gfs_cnx_t *cnx = (gfs_cnx_t*)_fi->fh;
+	debugf("release %s", _path);
 	if (cnx) {
 		gfs_cnx_free(cnx);
 		_fi->fh = 0;
@@ -203,6 +212,7 @@ gfs_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_fil
 {
 	size_t   bytes;
 	errn     err;
+	debugf("read %s", path);
 	err = gfs_cnx_read((gfs_cnx_t*)fi->fh, offset, buf, size, &bytes);
 	if (err<0/*err*/) { return -ENOENT; }
 	return bytes;

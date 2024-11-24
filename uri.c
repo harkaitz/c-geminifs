@@ -3,6 +3,12 @@
 #include <strings.h>
 #include <syslog.h>
 #include <stdlib.h>
+#ifdef DEBUG
+#  define debugf(...) syslog(LOG_DEBUG, "uri: " __VA_ARGS__)
+#else
+#  define debugf(...) ({})
+#endif
+#define errorf(...) syslog(LOG_ERR, "uri: " __VA_ARGS__)
 
 /* Exceptions from C99 */
 extern char *strtok_r(char *restrict, const char *restrict, char **restrict);
@@ -22,7 +28,7 @@ uri_from_path(uri_t **_uri, char const _path[], uri_e _proto)
 	uri_t *uri = NULL;
 
 	uri = calloc(1, sizeof(uri_t)+pathsz+1);
-	if (!uri/*err*/) { syslog(LOG_ERR, "%s: Not enough memory.", _path); goto failure; } 
+	if (!uri/*err*/) { errorf("%s: Not enough memory.", _path); goto failure; } 
 
 	uri->proto = _proto;
 	switch (uri->proto) {
@@ -33,7 +39,7 @@ uri_from_path(uri_t **_uri, char const _path[], uri_e _proto)
 	strcpy(uri->m, _path);
 
 	uri->host = strtok_r(uri->m, "/", &r);
-	if (!uri->host/*err*/) { syslog(LOG_ERR, "%s: No host in path (1).", _path); goto failure; }
+	if (!uri->host/*err*/) { errorf("%s: No host in path (1).", _path); goto failure; }
 	if ((colon = strchr(uri->host, ':'))) {
 		*colon = '\0';
 		uri->port = colon + 1;
@@ -59,20 +65,20 @@ uri_from_path(uri_t **_uri, char const _path[], uri_e _proto)
 		uri->path += 2;
 	}
 
-	if (uri->proto != URI_GOPHER) {
-		uri->is_file = NULL;
-		if ((s1 = strrchr(uri->path, '/'))) {
-			uri->is_file = strrchr(s1, '.');
-		} else {
-			uri->is_file = strrchr(uri->path, '.');
-		}
-		uri->is_directory = (!uri->is_file);
-	}
-
 	if ((r = strrchr(uri->path, '/'))) {
 		if (*(r+1) == '\0') {
 			*r = '\0';
 		}
+	}
+
+	if (uri->proto != URI_GOPHER) {
+		uri->is_file = NULL;
+		if ((s1 = strrchr(uri->path, '/'))) {
+			uri->is_file = strchr(s1, '.');
+		} else {
+			uri->is_file = strchr(uri->path, '.');
+		}
+		uri->is_directory = (!uri->is_file);
 	}
 
 	if ((z = strlen(uri->path))) {
@@ -106,11 +112,11 @@ uri_from_url(uri_t **_uri, char const *_url, uri_t const *_puri)
 	} else if (_puri) {
 		pos = snprintf(NULL, 0, "/%s:%s/%s/%s", _puri->host, _puri->port, _puri->path, _url);
 	} else {
-		syslog(LOG_ERR, "Unsupported URL (2).");
+		errorf("Unsupported URL (2).");
 		return -1;
 	}
 	path = malloc(pos+1);
-	if (!path/*err*/) { syslog(LOG_ERR, "Not enough memory."); return -1; }
+	if (!path/*err*/) { errorf("Not enough memory."); return -1; }
 	
 	if (host) {
 		sprintf(path, "/%s", host);

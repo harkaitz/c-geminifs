@@ -5,7 +5,7 @@
 PROJECT   =c-geminifs
 VERSION   =1.0.0
 CC        = $(shell which $(TPREFIX)cc $(TPREFIX)gcc 2>/dev/null | head -n 1)
-CFLAGS    = -Wall -g3 -std=c99 -DDEBUG
+CFLAGS    = -Wall -g3 -std=c99 #-DDEBUG
 PREFIX    =/usr/local
 BUILDDIR ?=.build
 UNAME_S  ?=$(shell uname -s)
@@ -13,7 +13,7 @@ EXE      ?=$(shell uname -s | awk '/Windows/ || /MSYS/ || /CYG/ { print ".exe" }
 PROGS     =$(patsubst %, $(BUILDDIR)/%$(EXE), mount.gemini)
 LIBS      =$(shell pkg-config --static --libs fuse3 libtls)
 HEADERS   =$(shell find . -name '*.h')
-SOURCES   = main.c gmi.c ssl.c gem.c uri.c
+SOURCES   = main.c gmi.c pool.c ssl.c gem.c uri.c
 
 
 all: $(PROGS)

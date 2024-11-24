@@ -2,13 +2,19 @@
 #include <tls.h>
 #include <syslog.h>
 #include <string.h>
+#ifdef DEBUG
+#  define debugf(...) syslog(LOG_DEBUG, "ssl: " __VA_ARGS__)
+#else
+#  define debugf(...) ({})
+#endif
+#define errorf(...) syslog(LOG_ERR, "ssl: " __VA_ARGS__)
 
 errn
 ssl_init(void)
 {
 	int err;
 	err = tls_init();
-	if (err<0/*err*/) { syslog(LOG_ERR, "Internal error: TLS initialization."); return -1; }
+	if (err<0/*err*/) { errorf("Internal error: TLS initialization."); return -1; }
 	return 0;
 }
 
@@ -19,17 +25,17 @@ ssl_connect(ssl_t *_ssl, char const _host[], char const _port[])
 
 	_ssl->tls = NULL;
 	_ssl->config = tls_config_new();
-	if (!_ssl->config/*err*/) { syslog(LOG_ERR, "Internal error: TLS configuration."); goto cleanup; }
+	if (!_ssl->config/*err*/) { errorf("Internal error: TLS configuration."); goto cleanup; }
 	tls_config_insecure_noverifycert(_ssl->config);
-	tls_config_insecure_noverifyname(_ssl->config);
+	//tls_config_insecure_noverifyname(_ssl->config);
 	tls_config_set_ciphers(_ssl->config, "compat");
 
 	_ssl->tls = tls_client();
-	if (!_ssl->tls/*err*/) { syslog(LOG_ERR, "Internal error: tls_client."); goto cleanup; }
+	if (!_ssl->tls/*err*/) { errorf("Internal error: tls_client."); goto cleanup; }
 	err = tls_configure(_ssl->tls, _ssl->config);
-	if (err<0/*err*/) {  syslog(LOG_ERR, "Internal error: tls_configure."); goto cleanup; }
+	if (err<0/*err*/) {  errorf("Internal error: tls_configure."); goto cleanup; }
 	err = tls_connect(_ssl->tls, _host, _port);
-	if (err<0/*err*/) { syslog(LOG_ERR, "Connection error: %s.", tls_error(_ssl->tls)); goto cleanup; }
+	if (err<0/*err*/) { errorf("Connection error: %s.", tls_error(_ssl->tls)); goto cleanup; }
 
 	while(1) {
 		err = tls_handshake(_ssl->tls);
@@ -52,11 +58,11 @@ ssl_read(ssl_t *_ssl, char _b[], size_t _bsz, size_t *_opt_bytes)
 	ssize_t  ret;
 	while (1) {
 		ret = tls_read(_ssl->tls, _b+pos, _bsz-pos);
-		if (ret == -2) {
+		if (ret == TLS_WANT_POLLIN) {
 			continue;
 		}
 		if (ret == -1) {
-			syslog(LOG_ERR, "Connection error: %p: %s.", _ssl, tls_error(_ssl->tls));
+			errorf("Connection error: %p: %s.", _ssl, tls_error(_ssl->tls));
 			return -1;
 		}
 		if (ret == 0) {
@@ -82,7 +88,7 @@ ssl_write(ssl_t *_ssl, char const _b[], size_t _bsz)
 			continue;
 		}
 		if (ret == -1 || ret == 0) {
-			syslog(LOG_ERR, "Connection error: %p: %s.", _ssl, tls_error(_ssl->tls));
+			errorf("Connection error: %p: %s.", _ssl, tls_error(_ssl->tls));
 			return -1;
 		}
 		pos += ret;
