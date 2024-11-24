@@ -1,10 +1,11 @@
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
 #define _POSIX_C_SOURCE 200809L
 #define FUSE_USE_VERSION 31
 
 #include "err.h"
 #include "cnx.h"
-#include "cnx_dir.h"
-#include "pool.h"
 #include <fuse3/fuse.h>
 #include <stddef.h>
 #include <assert.h>
@@ -43,9 +44,12 @@ struct fs_options_s {
 	char const *servers;
 	char const *urls;
 	int         help;
+	int         max_gmi_size;
 };
 
-static struct fs_options_s          gfs_opts = {0};
+static struct fs_options_s gfs_opts = {
+	.max_gmi_size = GFS_MAX_GMI_FILE
+};
 static const struct fuse_operations gfs_ops;
 
 int
@@ -71,7 +75,6 @@ main(int _argc, char *_argv[])
 		args.argv[0][0] = '\0';
 	}
 
-	gfs_pool_init(-1, -1, -1);
 	int ret = fuse_main(args.argc, args.argv, &gfs_ops, NULL);
 	fuse_opt_free_args(&args);
 	return ret;
@@ -80,8 +83,6 @@ main(int _argc, char *_argv[])
 static void *
 gfs_init(struct fuse_conn_info *_conn, struct fuse_config *_cfg)
 {
-	(void) _conn;
-	//_cfg->direct_io = 1;
 	_cfg->kernel_cache = 1;
 	return NULL;
 }
@@ -89,8 +90,8 @@ gfs_init(struct fuse_conn_info *_conn, struct fuse_config *_cfg)
 static int
 gfs_getattr(const char *path, struct stat *stbuf, struct fuse_file_info *fi)
 {
-	uri_t   uri  = {0};
-	err_t  *err  = NULL;
+	uri_t    uri = {0};
+	errn     err;
 
 	memset(stbuf, 0, sizeof(struct stat));
 	if (!strcmp(path, "/")) {
@@ -100,7 +101,7 @@ gfs_getattr(const char *path, struct stat *stbuf, struct fuse_file_info *fi)
 	}
 
 	err = uri_from_path(&uri, path, "gemini");
-	if (err) { goto failure; }
+	if (err<0/*err*/) { return -ENOENT; }
 
 	if (uri.is_directory) {
 		stbuf->st_mode = S_IFDIR | 0755;
@@ -112,13 +113,6 @@ gfs_getattr(const char *path, struct stat *stbuf, struct fuse_file_info *fi)
 	}
 
 	return 0;
-	failure:
-	if (err) {
-		err_print(err);
-		free(err);
-	}
-	return -ENOENT;
-	(void) fi;
 }
 
 static int
@@ -127,12 +121,12 @@ gfs_readdir(
     off_t offset, struct fuse_file_info *fi,
     enum fuse_readdir_flags flags
 ) {
-	err_t        *err  = NULL;
-	gfs_cnx_t     cnx  = {0};
-	uri_t         uri  = {0};
-	bool          found, start;
-	char          buffer[1024*5];
-	char         *name, *r;
+	errn             err, ret = -ENOENT;
+	gfs_cnx_t        cnx  = {0};
+	uri_t            uri  = {0};
+	bool             found, start;
+	char             buffer[gfs_opts.max_gmi_size];
+	char            *name, *r;
 	
 	filler(buf, ".", NULL, 0, 0);
 	filler(buf, "..", NULL, 0, 0);
@@ -155,39 +149,32 @@ gfs_readdir(
 
 	
 	err = gfs_cnx_open(&cnx, path);
-	if (err) { goto failure; }
+	if (err<0/*err*/) { goto cleanup; }
 
 	filler(buf, "index.gmi", NULL, 0, 0);
 	for (start = true; true; start = false) {
 		err = gfs_cnx_readdir(&cnx, &uri, &name, start, &found, &r, buffer, sizeof(buffer));
-		if (err) { goto failure; }
+		if (err<0/*err*/) { goto cleanup; }
 		if (!found) break;
 		filler(buf, name, NULL, 0, 0);
 	}
-	gfs_cnx_reset(&cnx, true);
 
-	return 0;
-	failure:
+	ret = 0;
+	cleanup:
 	gfs_cnx_reset(&cnx, true);
-	if (err) {
-		err_print(err);
-		free(err);
-	}
-	return -ENOENT;
-	(void) offset;
-	(void) fi;
-	(void) flags;
+	return ret;
 }
 
 static int
 gfs_open(const char *path, struct fuse_file_info *fi)
 {
-	gfs_cnx_t    *cnx  = NULL;
-	err_t        *err  = NULL;
+	gfs_cnx_t       *cnx  = NULL;
+	errn             err;
 	if (!fi->fh) {
 		err = gfs_cnx_open_new(&cnx, path);
-		if (err) { err_print(err); free(err); return -ENOENT;}
+		if (err<0/*err*/) { return -ENOENT;}
 		fi->fh = (uint64_t) cnx;
+		fi->keep_cache = 1;
 	}
 	return 0;
 }
@@ -207,20 +194,11 @@ gfs_release(const char *_path, struct fuse_file_info *_fi)
 static int
 gfs_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
 {
-	size_t      bytes;
-	err_t      *err  = NULL;
-	gfs_cnx_t  *cnx  = (gfs_cnx_t*) fi->fh;
-
-	err = gfs_cnx_read(cnx, offset, buf, size, &bytes);
-	if (err) { goto failure; }
-
+	size_t   bytes;
+	errn     err;
+	err = gfs_cnx_read((gfs_cnx_t*)fi->fh, offset, buf, size, &bytes);
+	if (err<0/*err*/) { return -ENOENT; }
 	return bytes;
-	failure:
-	if (err) {
-		err_print(err);
-		free(err);
-	}
-	return -ENOENT;
 }
 
 static const struct fuse_operations gfs_ops = {

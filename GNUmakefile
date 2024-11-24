@@ -10,13 +10,12 @@ PREFIX    =/usr/local
 BUILDDIR ?=.build
 UNAME_S  ?=$(shell uname -s)
 EXE      ?=$(shell uname -s | awk '/Windows/ || /MSYS/ || /CYG/ { print ".exe" }')
-PROGS     =$(BUILDDIR)/mount.gemini$(EXE) $(BUILDDIR)/geminifs_uri$(EXE) $(BUILDDIR)/geminifs_cnx$(EXE)
-LIBS      =-lfuse3
+PROGS     =$(BUILDDIR)/mount.gemini$(EXE) $(BUILDDIR)/geminifs_uri$(EXE)
+LIBS      =-lfuse3 -ltls -lresolv -lssl -lcrypto
 HEADERS   =$(shell find . -name '*.h')
 
-MNT_SOURCES = fuse3_main.c cnx_dir.c cnx.c gmi.c uri.c pool.c
+MNT_SOURCES = fuse3_main.c cnx.c gmi.c uri.c ssl.c
 URI_SOURCES = uri_main.c uri.c
-CNX_SOURCES = cnx_main.c cnx_dir.c cnx.c gmi.c uri.c pool.c
 
 all: $(PROGS)
 clean:
@@ -30,14 +29,16 @@ $(BUILDDIR)/mount.gemini$(EXE): $(patsubst %.c, $(BUILDDIR)/obj/%.o, $(MNT_SOURC
 $(BUILDDIR)/geminifs_uri$(EXE): $(patsubst %.c, $(BUILDDIR)/obj/%.o, $(URI_SOURCES))
 	@mkdir -p $(BUILDDIR)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
-$(BUILDDIR)/geminifs_cnx$(EXE): $(patsubst %.c, $(BUILDDIR)/obj/%.o, $(CNX_SOURCES))
-	@mkdir -p $(BUILDDIR)
-	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
+
 ##
 $(BUILDDIR)/obj/%.o: %.c $(HEADERS)
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $<
-## sudo apt-get -y install libfuse3-dev
+deps:
+	build_libressl
+	build_libfuse
+
+## 
 ## -- BLOCK:c --
 clean: clean-c
 clean-c:

@@ -7,6 +7,7 @@ Example:
 
     # mkdir -p /www/gemini:
     # mount.gemini /www/gemini:
+    # find /www/gemini:/geminiprotocol.net
     /www/gemini:/geminiprotocol.net
     /www/gemini:/geminiprotocol.net/index.gmi
     /www/gemini:/geminiprotocol.net/news
@@ -29,6 +30,23 @@ Example:
     /www/gemini:/geminiprotocol.net/software
     /www/gemini:/geminiprotocol.net/software/index.gmi
     /www/gemini:/geminiprotocol.net/software/http
+
+## Building
+
+You need libressl and fuse development files.
+
+    $ sudo apt-get -y install libfuse3-dev libressl-dev
+
+## Things to do
+
+- Implement a pool in "pool.c" for making it faster.
+- Add options for different parameters.
+- Add symbolic links.
+- Add gopher support.
+- Add support for other URIs outside gemini, for example 
+  `ftp://www.example.com name` would be a link named "name" linking
+  to `/www/ftp:/www.example.com` where `/www/ftp:` is another file
+  system.
 
 ## Style guide
 

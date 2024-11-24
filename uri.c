@@ -1,11 +1,14 @@
-#define _POSIX_C_SOURCE 200809L
 #include "uri.h"
 #include "err.h"
 #include <string.h>
 #include <strings.h>
+#include <syslog.h>
 
-err_t *
-uri_from_path(uri_t *_uri, char const *_path, char const *_proto)
+/* Exceptions from C99 */
+extern char *strtok_r(char *restrict, const char *restrict, char **restrict);
+
+errn
+uri_from_path(uri_t *_uri, char const _path[], char const _proto[])
 {
 	int pos = 0;
 	char path[GFS_MAX_PATH+1], *r, *l, *colon;
@@ -18,14 +21,16 @@ uri_from_path(uri_t *_uri, char const *_path, char const *_proto)
 	/* Check input validity. */
 	pathsz = strlen(_path);
 	if ((pathsz) >= GFS_MAX_PATH) {
-		return err_new(-1, "%s: Unsupported path: Too large", _path);
+		syslog(LOG_ERR, "%s: Unsupported path: Too large.", _path);
+		return -1;
 	}
 	if (!strcasecmp(_proto, "gemini")) {
 		_uri->proto = "gemini";
 		_uri->port = "1965";
 		default_port = "1965";
 	} else {
-		return err_new(-1, "Unsupported protocol: %s", _path);
+		syslog(LOG_ERR, "%s: Unsupported protocol.", _path);
+		return -1;
 	}
 
 	/* Fill host and path parts. */
@@ -58,7 +63,10 @@ uri_from_path(uri_t *_uri, char const *_path, char const *_proto)
 	}
 
 	/* Fail if the host is not present. */
-	if (!_uri->host/*err*/) { return err_new(-1, "%s: No host in path (1)", path); }
+	if (!_uri->host) {
+		syslog(LOG_ERR, "%s: No host in path (1).", path);
+		return -1;
+	}
 
 	/* Create url. */
 	is_default_port = (!strcmp(_uri->port, default_port));
@@ -69,10 +77,10 @@ uri_from_path(uri_t *_uri, char const *_path, char const *_proto)
 	    _uri->path,
 	    (_uri->is_directory)?"/":""
 	);
-	return NULL;
+	return 0;
 }
 
-err_t *
+errn
 uri_from_url(uri_t *_uri, char const *_url, uri_t const *_puri)
 {
 	char const *rest;
@@ -91,7 +99,7 @@ uri_from_url(uri_t *_uri, char const *_url, uri_t const *_puri)
 	} else {
 		pos = snprintf(path, sizeof(path), "/%s:%s/%s/%s", _puri->host, _puri->port, _puri->path, _url);
 	}
-	if (pos >= sizeof(path)/*err*/) { return err_new(-1, "The url is too large"); }
+	if (pos >= sizeof(path)/*err*/) { syslog(LOG_ERR, "The url is too large"); return -1; }
 	return uri_from_path(_uri, path, _puri->proto);
 }
 

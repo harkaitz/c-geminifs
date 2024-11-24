@@ -1,13 +1,14 @@
-#define _POSIX_C_SOURCE 200809L
 #include "gmi.h"
 #include "cnx.h"
 #include <string.h>
+
+/* Exceptions from C99 */
+extern char *strtok_r(char *restrict, const char *restrict, char **restrict);
 
 bool
 gmi_getlink(char _gmi[], uri_t const *_parent, uri_t *_uri, char **_opt_desc, char **_r1)
 {
 	char *gmi = _gmi, *line, *url, *r2;
-	err_t *err;
 
  recurse:
 	line = strtok_r(gmi, "\n", _r1); gmi = NULL;
@@ -30,10 +31,7 @@ gmi_getlink(char _gmi[], uri_t const *_parent, uri_t *_uri, char **_opt_desc, ch
 		*_opt_desc = name;
 	}
 
-	err = uri_from_url(_uri, url, _parent);
-	if (err) {
-		free(err);
-		err = NULL;
+	if (uri_from_url(_uri, url, _parent)<0) {
 		goto recurse;
 	}
 

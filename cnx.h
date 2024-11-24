@@ -1,9 +1,8 @@
 #ifndef GFS_CNX_H
 #define GFS_CNX_H
 
-#include "err.h"
 #include "uri.h"
-#include "pool.h"
+#include "ssl.h"
 #include <stdio.h>
 #include <stdbool.h>
 #include <pthread.h>
@@ -17,8 +16,7 @@ struct gfs_cnx_s {
 	bool            failed;
 	char const     *res_code;
 	char const     *res_meta;
-	gfs_wire_t      wire;
-	FILE           *fp[2];
+	gfs_ssl_t       ssl;
 	char            rbuf[1024];
 	char            rbufsz;
 	char           *dbuf;
@@ -26,11 +24,24 @@ struct gfs_cnx_s {
 	bool            dend;
 };
 
-err_t *gfs_cnx_open_new(gfs_cnx_t **_cnx, char const _path[]);
-void   gfs_cnx_free(gfs_cnx_t *_cnx);
+errn gfs_cnx_open_new(gfs_cnx_t **_cnx, char const _path[]);
+void gfs_cnx_free(gfs_cnx_t *_cnx);
 
-void   gfs_cnx_reset(gfs_cnx_t *_cnx, bool _reset_uri);
-err_t *gfs_cnx_open(gfs_cnx_t *_cnx, char const _path[]);
-err_t *gfs_cnx_read(gfs_cnx_t *_cnx, size_t _seek, char *_buf, size_t _size, size_t *_opt_read);
+void gfs_cnx_reset(gfs_cnx_t *_cnx, bool _reset_uri);
+errn gfs_cnx_open(gfs_cnx_t *_cnx, char const _path[]);
+errn gfs_cnx_read(gfs_cnx_t *_cnx, size_t _seek, char *_buf, size_t _size, size_t *_opt_read);
+
+errn gfs_cnx_readdir(
+    gfs_cnx_t  *_cnx,
+    uri_t      *_uri,
+    char      **_opt_name,
+    bool        _start,
+    bool       *_found,
+    /* Auxiliary. */
+    char      **_r,
+    char        _d[],
+    size_t      _dsz
+);
+
 
 #endif
