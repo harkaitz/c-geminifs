@@ -1,7 +1,7 @@
 GEMINI:// FUSE3 MOUNT COMMAND
 ===================================
 
-Mount the "gemini://" global web as a file system in UNIX machines.
+Mount the "gemini://" world wide web as a file system in UNIX machines.
 
 Example:
 
@@ -41,14 +41,15 @@ You need libressl and fuse development files.
 
 ## Things to do
 
-- Implement a pool in "pool.c" for making it faster.
+- Save certificate hashes in a directory.
+- Better pool algorithm.
 - Add options for different parameters.
 - Add symbolic links.
-- Add gopher support.
 - Add support for other URIs outside gemini, for example 
   `ftp://www.example.com name` would be a link named "name" linking
   to `/www/ftp:/www.example.com` where `/www/ftp:` is another file
   system.
+- Maybe rewrite the whole thing in rust.
 
 ## Style guide
 
