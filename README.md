@@ -36,6 +36,8 @@ Example:
 You need libressl and fuse development files.
 
     $ sudo apt-get -y install libfuse3-dev libressl-dev
+    $ make
+    $ sudo make install
 
 ## Things to do
 

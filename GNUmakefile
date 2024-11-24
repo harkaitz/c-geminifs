@@ -11,7 +11,7 @@ BUILDDIR ?=.build
 UNAME_S  ?=$(shell uname -s)
 EXE      ?=$(shell uname -s | awk '/Windows/ || /MSYS/ || /CYG/ { print ".exe" }')
 PROGS     =$(BUILDDIR)/mount.gemini$(EXE) $(BUILDDIR)/geminifs_uri$(EXE)
-LIBS      =-lfuse3 -ltls -lresolv -lssl -lcrypto
+LIBS      =$(shell pkg-config --static --libs fuse3 libtls)
 HEADERS   =$(shell find . -name '*.h')
 
 MNT_SOURCES = fuse3_main.c cnx.c gmi.c uri.c ssl.c
@@ -19,8 +19,10 @@ URI_SOURCES = uri_main.c uri.c
 
 all: $(PROGS)
 clean:
-	rm -f $(PROGS)
+	rm -fr $(PROGS) $(BUILDDIR)/obj
 install:
+	mkdir -p $(DESTDIR)$(PREFIX)/bin
+	cp $(PROGS) $(DESTDIR)$(PREFIX)/bin
 check:
 
 $(BUILDDIR)/mount.gemini$(EXE): $(patsubst %.c, $(BUILDDIR)/obj/%.o, $(MNT_SOURCES))
@@ -37,8 +39,9 @@ $(BUILDDIR)/obj/%.o: %.c $(HEADERS)
 deps:
 	build_libressl
 	build_libfuse
-
-## 
+ifeq ($(LIBS),)
+$(error Missing dependencies)
+endif
 ## -- BLOCK:c --
 clean: clean-c
 clean-c:
