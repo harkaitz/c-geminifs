@@ -4,7 +4,7 @@
 #include <string.h>
 
 errn
-gfs_ssl_init(void)
+ssl_init(void)
 {
 	int err;
 	err = tls_init();
@@ -13,7 +13,7 @@ gfs_ssl_init(void)
 }
 
 errn
-gfs_ssl_connect(gfs_ssl_t *_ssl, cstr _host, cstr _port)
+ssl_connect(ssl_t *_ssl, char const _host[], char const _port[])
 {
 	int err;
 
@@ -31,6 +31,13 @@ gfs_ssl_connect(gfs_ssl_t *_ssl, cstr _host, cstr _port)
 	err = tls_connect(_ssl->tls, _host, _port);
 	if (err<0/*err*/) { syslog(LOG_ERR, "Connection error: %s.", tls_error(_ssl->tls)); goto cleanup; }
 
+	while(1) {
+		err = tls_handshake(_ssl->tls);
+		if (err == TLS_WANT_POLLIN || err == TLS_WANT_POLLOUT || err == -2)
+			continue;
+		break;
+	}
+
 	return 0;
 	cleanup:
 	if (_ssl->tls) { tls_close(_ssl->tls); tls_free(_ssl->tls); }
@@ -39,7 +46,7 @@ gfs_ssl_connect(gfs_ssl_t *_ssl, cstr _host, cstr _port)
 }
 
 errn
-gfs_ssl_read(gfs_ssl_t *_ssl, char _b[], size_t _bsz, size_t *_opt_bytes)
+ssl_read(ssl_t *_ssl, char _b[], size_t _bsz, size_t *_opt_bytes)
 {
 	size_t   pos = 0;
 	ssize_t  ret;
@@ -65,7 +72,7 @@ gfs_ssl_read(gfs_ssl_t *_ssl, char _b[], size_t _bsz, size_t *_opt_bytes)
 }
 
 errn
-gfs_ssl_write(gfs_ssl_t *_ssl, char const _b[], size_t _bsz)
+ssl_write(ssl_t *_ssl, char const _b[], size_t _bsz)
 {
 	size_t   pos = 0;
 	ssize_t  ret;
@@ -87,13 +94,13 @@ gfs_ssl_write(gfs_ssl_t *_ssl, char const _b[], size_t _bsz)
 }
 
 errn
-gfs_ssl_puts(gfs_ssl_t *_ssl, char const _b[])
+ssl_puts(ssl_t *_ssl, char const _b[])
 {
-	return gfs_ssl_write(_ssl, _b, strlen(_b));
+	return ssl_write(_ssl, _b, strlen(_b));
 }
 
 void
-gfs_ssl_close(gfs_ssl_t *_ssl)
+ssl_close(ssl_t *_ssl)
 {
 	if (_ssl->tls) { tls_close(_ssl->tls); tls_free(_ssl->tls); }
 	if (_ssl->config) { tls_config_free(_ssl->config); }

@@ -10,12 +10,11 @@ PREFIX    =/usr/local
 BUILDDIR ?=.build
 UNAME_S  ?=$(shell uname -s)
 EXE      ?=$(shell uname -s | awk '/Windows/ || /MSYS/ || /CYG/ { print ".exe" }')
-PROGS     =$(BUILDDIR)/mount.gemini$(EXE) $(BUILDDIR)/geminifs_uri$(EXE)
+PROGS     =$(patsubst %, $(BUILDDIR)/%$(EXE), mount.gemini)
 LIBS      =$(shell pkg-config --static --libs fuse3 libtls)
 HEADERS   =$(shell find . -name '*.h')
+SOURCES   = main.c gmi.c ssl.c gem.c uri.c
 
-MNT_SOURCES = fuse3_main.c cnx.c gmi.c uri.c ssl.c
-URI_SOURCES = uri_main.c uri.c
 
 all: $(PROGS)
 clean:
@@ -25,10 +24,7 @@ install:
 	cp $(PROGS) $(DESTDIR)$(PREFIX)/bin
 check:
 
-$(BUILDDIR)/mount.gemini$(EXE): $(patsubst %.c, $(BUILDDIR)/obj/%.o, $(MNT_SOURCES))
-	@mkdir -p $(BUILDDIR)
-	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
-$(BUILDDIR)/geminifs_uri$(EXE): $(patsubst %.c, $(BUILDDIR)/obj/%.o, $(URI_SOURCES))
+$(BUILDDIR)/mount.gemini$(EXE): $(patsubst %.c, $(BUILDDIR)/obj/%.o, $(SOURCES))
 	@mkdir -p $(BUILDDIR)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
 
